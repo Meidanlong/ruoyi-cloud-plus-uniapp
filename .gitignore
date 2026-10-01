@@ -46,3 +46,7 @@ nbdist/
 !*/build/*.xml
 
 .flattened-pom.xml
+
+######################################################################
+# Local Maven cache (build-only, not for repo)
+.m2/

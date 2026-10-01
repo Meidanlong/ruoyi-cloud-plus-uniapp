@@ -1,0 +1,113 @@
+# ruoyi-cloud-plus-uniapp 本地中间件编排（Docker 化，基于 Colima 运行时）
+# 与官方 script/docker/docker-compose.yml 的区别：
+#   1. 使用 bridge 网络（ruoyi-net），不占用 host 网络，避免与本机 togetherdo 等项目冲突
+#   2. 容器名统一加 ruoyi- 前缀
+#   3. MySQL 宿主机端口改为 3307（本机 3306 已被 togetherdo-dev-mysql 占用）
+#   4. Nacos 宿主机端口改为 18848（本机 8848 已被其他 nacos 容器占用）
+#   5. 镜像版本对齐 RuoYi-Cloud-Plus 6.0.0 实测依赖（nacos 2.5.1 / seata 2.4.0 / MySQL 8.0）
+#   6. 业务服务后续通过容器名(ruoyi-mysql:3306 等)在 ruoyi-net 内互访
+# 注：/docker/* 为 Colima VM 内路径（与官方一致），数据存于 Colima VM 磁盘，colima stop 不丢
+networks:
+  ruoyi-net:
+    driver: bridge
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ruoyi-mysql
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: ruoyi123
+      MYSQL_DATABASE: ry-cloud
+    ports:
+      - "3307:3306"
+    volumes:
+      - /docker/ruoyi-mysql/data:/var/lib/mysql
+    command:
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_general_ci
+      --explicit_defaults_for_timestamp=true
+      --lower_case_table_names=1
+    networks:
+      - ruoyi-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pruoyi123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  nacos:
+    image: nacos/nacos-server:v2.4.3
+    container_name: ruoyi-nacos
+    ports:
+      - "18848:8848"
+      - "19848:9848"
+      - "19849:9849"
+    environment:
+      TZ: Asia/Shanghai
+      MODE: standalone
+      PREFER_HOST_MODE: hostname
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+    networks:
+      - ruoyi-net
+    healthcheck:
+      # Nacos 2.5.1 就绪端点为 /nacos/v1/console/health/readiness（旧 /nacos/health/reading 已移除）
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/v1/console/health/readiness"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+
+  redis:
+    image: redis:7
+    container_name: ruoyi-redis
+    ports:
+      - "6379:6379"
+    environment:
+      TZ: Asia/Shanghai
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "ruoyi123"]
+    networks:
+      - ruoyi-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "ruoyi123", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    # 镜像源 daocloud 对 minio/minio 仓库返回 403，改为本地基于 alpine apk 自建
+    build:
+      context: .
+      dockerfile: minio.Dockerfile
+    image: local-ruoyi-minio:latest
+    container_name: ruoyi-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      TZ: Asia/Shanghai
+      MINIO_ROOT_USER: ruoyi
+      MINIO_ROOT_PASSWORD: ruoyi123
+      MINIO_COMPRESS: "off"
+    command: server --address ':9000' --console-address ':9001' /data
+    volumes:
+      - /docker/ruoyi-minio/data:/data
+    networks:
+      - ruoyi-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  seata-server:
+    image: apache/seata-server:2.4.0
+    container_name: ruoyi-seata
+    ports:
+      - "7091:7091"
+      - "8091:8091"
+    environment:
+      TZ: Asia/Shanghai
+      SEATA_PORT: 8091
+    networks:
+      - ruoyi-net

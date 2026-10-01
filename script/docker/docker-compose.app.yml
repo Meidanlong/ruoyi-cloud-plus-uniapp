@@ -1,0 +1,58 @@
+# 核心链路后端应用 (gateway + auth + system)
+# 复用 docker-compose.ruoyi.yml 创建的 ruoyi-net 桥接网络
+# 通过命令行参数把 Nacos 地址从编译期硬编码的 127.0.0.1:8848 覆盖为容器服务名
+networks:
+  ruoyi-net:
+    external: true
+    name: docker_ruoyi-net
+
+services:
+  ruoyi-gateway:
+    build:
+      context: ..
+      dockerfile: script/docker/app.Dockerfile
+      args:
+        JAR_PATH: ruoyi-gateway/target/ruoyi-gateway.jar
+    image: ruoyi-gateway:6.0.0
+    container_name: ruoyi-gateway
+    command: ["java", "-jar", "/app/app.jar",
+      "--spring.cloud.nacos.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.discovery.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.config.server-addr=ruoyi-nacos:8848"]
+    ports:
+      - "8080:8080"
+    networks:
+      - ruoyi-net
+    restart: unless-stopped
+
+  ruoyi-auth:
+    build:
+      context: ..
+      dockerfile: script/docker/app.Dockerfile
+      args:
+        JAR_PATH: ruoyi-auth/target/ruoyi-auth.jar
+    image: ruoyi-auth:6.0.0
+    container_name: ruoyi-auth
+    command: ["java", "-jar", "/app/app.jar",
+      "--spring.cloud.nacos.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.discovery.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.config.server-addr=ruoyi-nacos:8848"]
+    networks:
+      - ruoyi-net
+    restart: unless-stopped
+
+  ruoyi-system:
+    build:
+      context: ..
+      dockerfile: script/docker/app.Dockerfile
+      args:
+        JAR_PATH: ruoyi-modules/ruoyi-system/target/ruoyi-system.jar
+    image: ruoyi-system:6.0.0
+    container_name: ruoyi-system
+    command: ["java", "-jar", "/app/app.jar",
+      "--spring.cloud.nacos.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.discovery.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.config.server-addr=ruoyi-nacos:8848"]
+    networks:
+      - ruoyi-net
+    restart: unless-stopped
