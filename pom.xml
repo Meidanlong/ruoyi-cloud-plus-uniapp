@@ -5,12 +5,12 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.dromara</groupId>
-    <artifactId>ruoyi-cloud-plus</artifactId>
+    <artifactId>ruoyi-cloud-plus-uniapp</artifactId>
     <version>${revision}</version>
 
-    <name>RuoYi-Cloud-Plus</name>
+    <name>ruoyi-cloud-plus-uniapp</name>
     <url>https://gitee.com/dromara/RuoYi-Cloud-Plus</url>
-    <description>Dromara RuoYi-Cloud-Plus微服务系统</description>
+    <description>ruoyi-cloud-plus-uniapp 微服务系统</description>
 
     <properties>
         <!-- 项目基础配置 -->
@@ -63,8 +63,6 @@
         <logstash.version>9.0</logstash.version>
         <!-- 链路追踪 -->
         <skywalking-toolkit.version>9.6.0</skywalking-toolkit.version>
-        <!-- 修复 alibaba 自带的 fastjson 相关漏洞(框架本身并未使用) -->
-        <fastjson.version>1.2.84</fastjson.version>
         <fastjson2.version>2.0.64</fastjson2.version>
         <!-- OSS 配置 -->
         <aws.sdk.version>2.55.4</aws.sdk.version>
@@ -389,12 +387,6 @@
                 <groupId>org.lionsoul</groupId>
                 <artifactId>ip2region</artifactId>
                 <version>${ip2region.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.alibaba</groupId>
-                <artifactId>fastjson</artifactId>
-                <version>${fastjson.version}</version>
             </dependency>
 
             <!-- 限制 alibaba 组件内自带的 fastjson2 版本 -->
