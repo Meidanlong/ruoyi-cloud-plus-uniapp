@@ -1,0 +1,170 @@
+# 扩展模块后端应用 (gen/job/resource/workflow/ai/demo/test-mq/monitor/snailjob-server/snailai-server)
+# 复用 docker-compose.ruoyi.yml 创建的 docker_ruoyi-net 桥接网络
+# 通过命令行参数把 Nacos 地址从编译期硬编码的 127.0.0.1:8848 覆盖为容器服务名
+networks:
+  ruoyi-net:
+    external: true
+    name: docker_ruoyi-net
+
+services:
+  ruoyi-gen:
+    build:
+      context: ../..
+      dockerfile: script/docker/app.Dockerfile
+      args:
+        JAR_PATH: ruoyi-modules/ruoyi-gen/target/ruoyi-gen.jar
+    image: ruoyi-gen:6.0.0
+    container_name: ruoyi-gen
+    command: ["java", "-jar", "/app/app.jar",
+      "--spring.cloud.nacos.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.discovery.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.config.server-addr=ruoyi-nacos:8848"]
+    networks:
+      - ruoyi-net
+    restart: unless-stopped
+
+  ruoyi-job:
+    build:
+      context: ../..
+      dockerfile: script/docker/app.Dockerfile
+      args:
+        JAR_PATH: ruoyi-modules/ruoyi-job/target/ruoyi-job.jar
+    image: ruoyi-job:6.0.0
+    container_name: ruoyi-job
+    command: ["java", "-jar", "/app/app.jar",
+      "--spring.cloud.nacos.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.discovery.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.config.server-addr=ruoyi-nacos:8848"]
+    networks:
+      - ruoyi-net
+    restart: unless-stopped
+
+  ruoyi-resource:
+    build:
+      context: ../..
+      dockerfile: script/docker/app.Dockerfile
+      args:
+        JAR_PATH: ruoyi-modules/ruoyi-resource/target/ruoyi-resource.jar
+    image: ruoyi-resource:6.0.0
+    container_name: ruoyi-resource
+    command: ["java", "-jar", "/app/app.jar",
+      "--spring.cloud.nacos.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.discovery.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.config.server-addr=ruoyi-nacos:8848"]
+    networks:
+      - ruoyi-net
+    restart: unless-stopped
+
+  ruoyi-workflow:
+    build:
+      context: ../..
+      dockerfile: script/docker/app.Dockerfile
+      args:
+        JAR_PATH: ruoyi-modules/ruoyi-workflow/target/ruoyi-workflow.jar
+    image: ruoyi-workflow:6.0.0
+    container_name: ruoyi-workflow
+    command: ["java", "-jar", "/app/app.jar",
+      "--spring.cloud.nacos.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.discovery.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.config.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.bus.base-packages=org.dromara.**.event"]
+    networks:
+      - ruoyi-net
+    restart: unless-stopped
+
+  ruoyi-ai:
+    build:
+      context: ../..
+      dockerfile: script/docker/app.Dockerfile
+      args:
+        JAR_PATH: ruoyi-modules/ruoyi-ai/target/ruoyi-ai.jar
+    image: ruoyi-ai:6.0.0
+    container_name: ruoyi-ai
+    command: ["java", "-jar", "/app/app.jar",
+      "--spring.cloud.nacos.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.discovery.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.config.server-addr=ruoyi-nacos:8848"]
+    networks:
+      - ruoyi-net
+    restart: unless-stopped
+
+  ruoyi-demo:
+    build:
+      context: ../..
+      dockerfile: script/docker/app.Dockerfile
+      args:
+        JAR_PATH: ruoyi-example/ruoyi-demo/target/ruoyi-demo.jar
+    image: ruoyi-demo:6.0.0
+    container_name: ruoyi-demo
+    command: ["java", "-jar", "/app/app.jar",
+      "--spring.cloud.nacos.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.discovery.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.config.server-addr=ruoyi-nacos:8848"]
+    networks:
+      - ruoyi-net
+    restart: unless-stopped
+
+  ruoyi-test-mq:
+    build:
+      context: ../..
+      dockerfile: script/docker/app.Dockerfile
+      args:
+        JAR_PATH: ruoyi-example/ruoyi-test-mq/target/ruoyi-test-mq.jar
+    image: ruoyi-test-mq:6.0.0
+    container_name: ruoyi-test-mq
+    command: ["java", "-jar", "/app/app.jar",
+      "--spring.cloud.nacos.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.discovery.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.config.server-addr=ruoyi-nacos:8848",
+      "--spring.kafka.bootstrap-servers=ruoyi-kafka:9092"]
+    networks:
+      - ruoyi-net
+    restart: unless-stopped
+
+  ruoyi-monitor:
+    build:
+      context: ../..
+      dockerfile: script/docker/app.Dockerfile
+      args:
+        JAR_PATH: ruoyi-visual/ruoyi-monitor/target/ruoyi-monitor.jar
+    image: ruoyi-monitor:6.0.0
+    container_name: ruoyi-monitor
+    command: ["java", "-jar", "/app/app.jar",
+      "--spring.cloud.nacos.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.discovery.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.config.server-addr=ruoyi-nacos:8848"]
+    networks:
+      - ruoyi-net
+    restart: unless-stopped
+
+  ruoyi-snailjob-server:
+    build:
+      context: ../..
+      dockerfile: script/docker/app.Dockerfile
+      args:
+        JAR_PATH: ruoyi-visual/ruoyi-snailjob-server/target/ruoyi-snailjob-server.jar
+    image: ruoyi-snailjob-server:6.0.0
+    container_name: ruoyi-snailjob-server
+    command: ["java", "-jar", "/app/app.jar",
+      "--spring.cloud.nacos.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.discovery.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.config.server-addr=ruoyi-nacos:8848"]
+    networks:
+      - ruoyi-net
+    restart: unless-stopped
+
+  ruoyi-snailai-server:
+    build:
+      context: ../..
+      dockerfile: script/docker/app.Dockerfile
+      args:
+        JAR_PATH: ruoyi-visual/ruoyi-snailai-server/target/ruoyi-snailai-server.jar
+    image: ruoyi-snailai-server:6.0.0
+    container_name: ruoyi-snailai-server
+    command: ["java", "-jar", "/app/app.jar",
+      "--spring.cloud.nacos.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.discovery.server-addr=ruoyi-nacos:8848",
+      "--spring.cloud.nacos.config.server-addr=ruoyi-nacos:8848"]
+    networks:
+      - ruoyi-net
+    restart: unless-stopped

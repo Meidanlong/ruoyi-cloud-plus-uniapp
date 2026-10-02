@@ -9,7 +9,7 @@ networks:
 services:
   ruoyi-gateway:
     build:
-      context: ..
+      context: ../..
       dockerfile: script/docker/app.Dockerfile
       args:
         JAR_PATH: ruoyi-gateway/target/ruoyi-gateway.jar
@@ -27,7 +27,7 @@ services:
 
   ruoyi-auth:
     build:
-      context: ..
+      context: ../..
       dockerfile: script/docker/app.Dockerfile
       args:
         JAR_PATH: ruoyi-auth/target/ruoyi-auth.jar
@@ -43,7 +43,7 @@ services:
 
   ruoyi-system:
     build:
-      context: ..
+      context: ../..
       dockerfile: script/docker/app.Dockerfile
       args:
         JAR_PATH: ruoyi-modules/ruoyi-system/target/ruoyi-system.jar
