@@ -31,10 +31,10 @@
 
 ---
 
-# 本仓库本地化部署指南（Docker + Colima）
+# 本仓库本地化部署指南（Docker）
 
 > 本仓库 = **Dromara RuoYi-Cloud-Plus `6.0.0`** 的本地化 Fork：在官方单体后端之上，补齐了
-> **Docker 全栈编排（Colima 运行时）**、**PC 前端（plus-ui）**、**移动端（uni-app 加密登录）** 与
+> **Docker 全栈编排**、**PC 前端（plus-ui）**、**移动端（uni-app 加密登录）** 与
 > **AI 中台（Snail AI）** 的接入。下方是本地快速使用、架构与能力的完整说明。
 > 官方功能/业务差异对照表见文末，仍适用。
 
@@ -47,12 +47,12 @@
 | 缓存 | Redis 7（Redisson） |
 | 数据库 | MySQL 8.0（ry-cloud） |
 | 分布式事务 | Seata 2.4.0 |
-| 文件存储 | MinIO（自建镜像，daocloud 对 minio/minio 仓库 403） |
+| 文件存储 | MinIO（自建镜像） |
 | 消息队列 | Kafka 3.7.1（KRaft 单节点，免 ZooKeeper） |
 | RPC | Apache Dubbo 3.x |
 | 前端 | plus-ui（Vue3 + ElementPlus，6.X-Vue 分支）/ ruoyi-uniapp（Vue3 + Vite + Pinia） |
 | AI | Snail AI（`com.aizuda` 系列 starter，非 Spring AI Alibaba） |
-| 容器运行时 | Colima 0.10.3（vz 驱动，**16G 内存**），所有 docker 命令经 `colima ssh -- sudo docker` 执行 |
+| 容器运行时 | Docker ≥ 24 / Docker Compose v2 |
 
 ## 2. 架构总览
 
@@ -97,7 +97,7 @@ ruoyi-cloud-plus-uniapp/
 │   ├── docker-compose.app.yml     # 核心链路（gateway/auth/system）
 │   ├── docker-compose.modules.yml # 扩展模块（10 个 service）
 │   ├── app.Dockerfile             # 应用镜像
-│   ├── minio.Dockerfile           # MinIO 自建镜像（绕开 daocloud 403）
+│   ├── minio.Dockerfile           # MinIO 自建镜像
 │   └── nacos-config/              # Nacos 配置（application-common / ruoyi-gateway / ruoyi-ai ...）
 ├── ruoyi-modules/ruoyi-ai/        # AI 模块（SnailAiController）
 ├── ruoyi-visual/ruoyi-snailai-server/  # Snail AI gRPC Server 端
@@ -110,20 +110,16 @@ ruoyi-cloud-plus-uniapp/
 
 ## 4. 环境要求
 
-- **Colima**：`colima start --cpu 4 --memory 16 --vz`（必须 ≥16G，否则 Nacos/Seata 起不来）。
-- **Docker CLI**：宿主机 docker CLI 版本较老，所有 docker 操作走 `colima ssh -- sudo docker ...`。
-- **Java 21 + Maven 3.8+**：用于本地 `mvn` 构建后端 jar（docker 镜像构建需要 `target/*.jar`）。
+- **Docker / Docker Compose v2**：本地全栈编排基于 Compose v2（编排文件见 `script/docker/`）。
+- **Java 21 + Maven 3.8+**：用于本地 `mvn` 构建后端 jar（镜像构建需要 `target/*.jar`）。
 - **Node 22 + pnpm 10**：用于前端/移动端依赖安装与运行。
-- **磁盘**：本机已用较高，确保 Colima VM 磁盘充足（中间件数据存于 Colima VM，stop 不丢）。
+- **资源建议**：宿主机内存 ≥16G（Nacos/Seata 较吃内存）；确保磁盘充足，中间件数据持久化于卷。
 
 ## 5. 快速开始
 
 ```bash
-# 0) 启动 Colima 运行时（16G）
-colima start --cpu 4 --memory 16 --vz
-
 # 1) 启动中间件（mysql/nacos/redis/minio/seata/kafka）
-colima ssh -- sudo docker compose -f script/docker/docker-compose.ruoyi.yml up -d
+docker compose -f script/docker/docker-compose.ruoyi.yml up -d
 
 # 2) 初始化：导入 Nacos 配置（script/docker/nacos-config/）+ 执行 script/sql 初始化 SQL
 #    Nacos 控制台: http://localhost:18848/nacos  (默认 nacos/nacos)
@@ -132,13 +128,13 @@ colima ssh -- sudo docker compose -f script/docker/docker-compose.ruoyi.yml up -
 mvn clean package -DskipTests
 
 # 4) 启动核心链路（gateway :8080 / auth / system）
-colima ssh -- sudo docker compose -f script/docker/docker-compose.app.yml up -d
+docker compose -f script/docker/docker-compose.app.yml up -d
 
 # 5) 启动扩展模块（gen/job/resource/workflow/ai/demo/test-mq/monitor/snailjob-server/snailai-server）
-colima ssh -- sudo docker compose -f script/docker/docker-compose.modules.yml up -d
+docker compose -f script/docker/docker-compose.modules.yml up -d
 
 # 6) 查看健康状态
-colima ssh -- sudo docker ps --format '{{.Names}}\t{{.Status}}'
+docker ps --format '{{.Names}}\t{{.Status}}'
 ```
 
 启动后访问：
@@ -218,16 +214,15 @@ RPC（Dubbo）、分布式事务（Seata）、多数据源、数据权限/脱敏
 
 - **`ruoyi-test-mq` 启动崩溃**：Spring Boot 4.1.1 下 `KafkaTemplate` bean 未自动装配（demo 代码级问题），
   基础设施无法解；其余 12 个应用均正常注册 healthy。
-- **镜像源**：daocloud 对 `minio/minio`、`bitnami/kafka` 返回 403 → MinIO 改用本地 `minio.Dockerfile` 自建、
-  Kafka 改用 `apache/kafka:3.7.1`。Colima 重启后 VM 内 `daemon.json` 镜像可能被重置，需写回并重启 dockerd。
-- **端口冲突（已规避）**：MySQL 本机 3306 被占 → 映射 `3307`；Nacos 本机 8848 被占 → 映射 `18848`。
+- **镜像选择（已固化于 compose）**：Kafka 用 `apache/kafka:3.7.1`（KRaft 单节点），MinIO 用本地 `minio.Dockerfile` 自建，
+  均已在 `script/docker/` 编排文件中定稿，直接 `up` 即可。
 - **Nacos 就绪端点**：2.4.3 为 `/nacos/v1/console/health/readiness`（旧端点已移除）。
-- **Colima 内存**：必须 16G，否则中间件（尤其 Nacos/Seata）起不来或极慢。
+- **资源**：建议宿主机内存 ≥16G，否则中间件（尤其 Nacos/Seata）起不来或极慢。
 
 ## 11. Git 状态
 
-- 当前分支 `6.X`，**本地领先 `origin/6.X` 共 4 个 commit**：
-  `e42cac8`（uni-app 接入）、`b2e7c22`（后端全栈 + Kafka）、`be2e4dd`（Docker 基础设施）、`917d3b1`（工程坐标统一 + 移除 fastjson 1.x）。
+- 当前分支 `6.X`，**本地领先 `origin/6.X` 共 5 个 commit**：
+  `5cce9f7`（完善根 README）、`e42cac8`（uni-app 接入）、`b2e7c22`（后端全栈 + Kafka）、`be2e4dd`（Docker 基础设施）、`917d3b1`（工程坐标统一 + 移除 fastjson 1.x）。
 - `origin` 指向官方 `dromara/RuoYi-Cloud-Plus`（**只读**），`git push` 会被 403 拒绝。
 - **推远程需先 fork 到可写地址**，再 `git remote set-url origin <你的fork>` 后推送。
 
