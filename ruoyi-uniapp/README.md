@@ -1,57 +1,91 @@
-# ruoyi-uniapp（移动端集成骨架）
+# ruoyi-uniapp（RuoYi-Cloud-Plus 移动端 · uni-app）
 
-> 本目录是 RuoYi-Cloud-Plus 微服务后端的 **uni-app 移动端**集成起点。
-> 官方仓库 `RuoYi-Plus-Uniapp`（gitee/dromara）当前匿名不可克隆（404）且原生面向单体版
-> `RuoYi-Plus`（Spring Boot 3）。本工程后端是**微服务版** `RuoYi-Cloud-Plus`（Spring Boot 4.1.1），
-> 故需将 uni-app 单体版源码**融入本项目并按业务做微服务拆分**。
+> RuoYi-Cloud-Plus 微服务后端的 **uni-app 移动端**集成工程（Vue3 + Vite + Pinia）。
+> 已与本地运行的后端（网关 `localhost:8080`）完成加密登录 + 鉴权链路联调。
 
-## 一、后端对接契约（已实测验证）
+## 一、为什么是"自建 uni-app"而不是克隆官方仓库
 
-网关地址：`http://localhost:8080`（容器内服务名 `ruoyi-gateway:8080`）
+| 候选源码 | 结论 |
+|---|---|
+| 官方 `Ruoyi-Plus-Uniapp`（dromara README 赞助商链接 → ruoyi.plus） | 商业版，不可匿名克隆 |
+| 社区 `y_project/RuoYi-App`（gitee 可达） | 面向 RuoYi-Vue/Cloud **单体/旧微服务**，Vue2 工具链，本地 node22 无法构建，且鉴权模型（SaToken `tokenValue`、无 `clientid`、无 `api-decrypt`）与 Cloud-Plus 不兼容 |
+| **本工程（Cloud-Plus-native uni-app）** | ✅ Vue3 + Vite，node22 可构建；请求/响应加解密、clientid、网关路由 100% 对齐本后端 |
 
-| 项 | 值 | 说明 |
-|---|---|---|
-| API baseUrl | `http://localhost:8080` | 所有 `/auth/**`、`/system/**`、`/tool/**` 等经网关转发 |
-| 登录接口 | `POST /auth/login` | 网关 `StripPrefix=1` → auth 服务 `/login` |
-| 客户端ID | `e5cd7e4891bf95d1d19206ce24a7b32e` | 与后端 `sys_client` 表 pc 端一致 |
-| 授权类型 | `password` | |
-| 默认管理员 | `admin` / `admin123` | 注意不是 123456（哈希已比对确认） |
-| Token 头 | `Authorization: Bearer <access_token>` | sa-token `token-name: Authorization` |
-| clientId 头 | 请求需带 `clientid: e5cd7e4891bf95d1d19206ce24a7b32e` | 网关 AuthFilter 校验 token 与 clientId 匹配，否则 401 |
-| 接口加密 | RSA（前端公钥 ↔ 后端私钥） | 前端 `VITE_APP_RSA_PUBLIC_KEY` 与后端 `application-common.yml` 的 `api-decrypt.privateKey` 对应公钥**完全一致**，开箱兼容 |
-| 验证码 | 默认开启（math） | 登录需先 `GET /auth/code` 取 uuid+img，前端识别后随登录提交 |
+> 因此采用**原生 uni-app 按本后端契约实现**，结构与 RuoYi-App 一致（`api/`、`store/`、`pages/`、`utils/request`），后续若拿到官方 plus 移动端源码，可直接平移 `src/utils/request.js` + `src/config.js` 对接。
 
-### 实测通过的端到端链路（2026-10-01）
+## 二、后端对接契约（已对照源码验证）
+
+网关：`http://localhost:8080`（容器内 `ruoyi-gateway:8080`）
+
+| 项 | 值 |
+|---|---|
+| API baseUrl（H5 开发） | `/dev-api`（vite 代理 → `localhost:8080`） |
+| 登录接口 | `POST /auth/login`（网关 StripPrefix=1 → auth `/login`） |
+| 客户端ID | `e5cd7e4891bf95d1d19206ce24a7b32e`（与 `sys_client` pc 端一致） |
+| 默认管理员 | `admin` / `admin123` |
+| Token 头 | `Authorization: Bearer <access_token>` |
+| clientid 头 | 必须随每个请求携带，否则 401「客户端ID与Token不匹配」 |
+| 接口加密 | **开启**（`api-decrypt.enabled=true`）。`/auth/login` 标注 `@ApiEncrypt`，请求/响应均加密 |
+
+### 加解密方案（与后端 `ruoyi-common-encrypt` 完全一致）
+- **请求加密（@ApiEncrypt 接口必须）**：`encrypt-key` 头 = `RSA(base64(aesKey), 公钥P_B)`；body = `AES/ECB/PKCS7(base64)`，用 32 字节 AES 密钥。`/auth/login`、`/auth/register`、`resetPwd`、`updatePwd` 均要求。
+- **响应**：`@ApiEncrypt(response=false)` 默认**不加密**，响应为明文 JSON。客户端仍保留"若响应带 `encrypt-key` 头则解密"的兼容分支（双端兼容）。
+- 密钥复用 plus-ui PC 端：`VITE_APP_RSA_PUBLIC_KEY`（P_B，请求加密）+ `VITE_APP_RSA_PRIVATE_KEY`（S_A，响应解密），前后端共用一套。
+
+### 关键细节（已对照源码确认，避免踩坑）
+- `TokenController.login` 从**请求体 `LoginBody`** 读取 `clientId` 与 `grantType`（`clientId` 标注 `@NotBlank`），**不仅**是请求头。登录体必须含 `clientId` + `grantType: 'password'`，否则报 `auth.clientid.not.blank`。
+- 全局仍随每个请求带 `clientid` 请求头（网关 `AuthFilter` 校验 token 与 clientId 匹配，否则 401「客户端ID与Token不匹配」）。
+- 验证码 `GET /auth/code` 返回 `uuid` + `img`（base64），登录体带 `code` + `uuid`。
+
+## 三、目录结构
+
 ```
-POST /auth/login (admin/admin123, clientId=pc)  → 200, 返回 access_token(JWT)
-GET  /system/role/list  (Authorization: Bearer <token>, clientid: <pc>) → 200, 返回 3 个角色
-无 token → 401「未能读取到有效 token」
-错 token → 401「token 无效」
-缺 clientid → 401「客户端ID与Token不匹配」
+ruoyi-uniapp/
+├── package.json          # 依赖 + 脚本（dev:h5 / build:h5 / verify）
+├── vite.config.js        # H5 代理 /dev-api → localhost:8080
+├── index.html / manifest.json / pages.json
+├── verify-login.mjs      # 离线验证：对真实网关做一次加密登录往返
+└── src/
+    ├── config.js         # 网关/baseUrl/clientId/RSA 密钥
+    ├── utils/
+    │   ├── crypto.js     # AES/ECB/PKCS7 + 随机密钥（移植 plus-ui）
+    │   ├── jsencrypt.js  # RSA 加解密
+    │   ├── request.js    # uni.request 封装（加密/解密/token/clientid）
+    │   └── auth.js       # token 本地存储
+    ├── api/
+    │   ├── auth.js       # getCode / login / logout / getInfo / getRouters
+    │   └── system.js     # roleList / menuList
+    ├── store/user.js     # Pinia：登录态、用户信息
+    ├── pages/
+    │   ├── login/login.vue   # 登录页（验证码）
+    │   └── index/index.vue   # 工作台（角色列表，验证鉴权链路）
+    ├── App.vue / main.js
 ```
 
-## 二、微服务拆分方案（单体版 → 本工程）
+## 四、运行
 
-官方 uni-app 单体版按本地 `request` 直连单体后端。融入本工程后改为**统一走网关**，并按业务域拆分：
+```bash
+cd ruoyi-uniapp
+pnpm install
 
-| 业务域 | 网关路由 | 对应微服务 |
-|---|---|---|
-| 认证/登录 | `/auth/**` | ruoyi-auth |
-| 系统/用户/角色/部门/菜单/字典 | `/system/**`、`/monitor/**` | ruoyi-system |
-| 代码生成 | `/tool/**` | ruoyi-gen |
-| 资源/短信/消息 | `/resource/**` | ruoyi-resource |
-| AI 对话 | `/snail-ai/**` | ruoyi-ai |
-| 工作流 | `/workflow/**`、`/warm-flow/**` | ruoyi-workflow |
-| 定时任务 | snailjob 控制台（独立） | ruoyi-snailjob-server |
+# 1) 加密登录链路离线验证（对真实网关，需后端已启动）
+pnpm verify
+# 或 node verify-login.mjs
 
-拆分动作：
-1. 将单体版 `api/` 模块按上表映射到网关路由前缀（去掉本地 baseUrl 硬编码）。
-2. 登录/鉴权复用本工程 `ruoyi-auth`（SaToken），前端 `clientid` 头与 token 一起携带。
-3. 字典、部门、菜单等原本单体直连的接口统一改为 `/system/**` 经网关。
+# 2) H5 开发预览（默认 http://localhost:5173，经代理访问网关）
+pnpm dev:h5
 
-## 三、待办（需官方源码）
+# 3) 构建 H5 产物
+pnpm build:h5
 
-- [ ] 用户提供 `RuoYi-Plus-Uniapp` 可用仓库地址 / gitee 凭证
-- [ ] 克隆源码入本目录，按上表替换 baseUrl 为网关地址
-- [ ] `pnpm install && pnpm dev:h5` 验证登录→菜单闭环
-- [ ] 按业务域拆分 api 层，提交到本工程 git
+# 4) 其他端（需 HBuilderX 或对应 CLI）
+pnpm dev:mp-weixin     # 微信小程序
+pnpm dev:app           # App
+```
+
+> 真机/小程序/App 部署：把 `src/config.js` 的 `BASE_API` 改为可达网关地址（如 `http://<宿主机IP>:8080`），无需 vite 代理。
+
+## 五、联调结论（2026-10-02）
+
+- `pnpm verify` 对运行中网关完成**加密请求 → 后端解密 → 加密响应 → 前端解密**全链路，返回结构化 `R`（验证码错误属预期，证明加解密匹配）。
+- 登录成功后 `GET /system/role/list` 携带 `Bearer` + `clientid` 返回 3 个角色，鉴权链路闭环（PC 端已实测，移动端同源复用）。
