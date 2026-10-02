@@ -221,8 +221,8 @@ RPC（Dubbo）、分布式事务（Seata）、多数据源、数据权限/脱敏
 
 ## 11. Git 状态
 
-- 当前分支 `6.X`，**本地领先 `origin/6.X` 共 5 个 commit**：
-  `5cce9f7`（完善根 README）、`e42cac8`（uni-app 接入）、`b2e7c22`（后端全栈 + Kafka）、`be2e4dd`（Docker 基础设施）、`917d3b1`（工程坐标统一 + 移除 fastjson 1.x）。
+- 当前分支 `6.X`，**本地领先 `origin/6.X` 共 6 个 commit**：
+  `6556c8e`（README 去除本机环境特殊性）、`5cce9f7`（完善根 README）、`e42cac8`（uni-app 接入）、`b2e7c22`（后端全栈 + Kafka）、`be2e4dd`（Docker 基础设施）、`917d3b1`（工程坐标统一 + 移除 fastjson 1.x）。
 - `origin` 指向官方 `dromara/RuoYi-Cloud-Plus`（**只读**），`git push` 会被 403 拒绝。
 - **推远程需先 fork 到可写地址**，再 `git remote set-url origin <你的fork>` 后推送。
 
