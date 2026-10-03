@@ -49,14 +49,24 @@ flowchart TB
     SYS["ruoyi-system"]
   end
   subgraph Modules["扩展模块 (docker-compose.modules.yml)"]
-    GEN["ruoyi-gen"] JOBS["ruoyi-job"] RES["ruoyi-resource"]
-    WF["ruoyi-workflow"] AI["ruoyi-ai"] DEMO["ruoyi-demo"]
-    TMQ["ruoyi-test-mq"] MON["ruoyi-monitor"]
-    SJ["ruoyi-snailjob-server"] SAI["ruoyi-snailai-server (gRPC)"]
+    GEN["ruoyi-gen"]
+    JOBS["ruoyi-job"]
+    RES["ruoyi-resource"]
+    WF["ruoyi-workflow"]
+    AI["ruoyi-ai"]
+    DEMO["ruoyi-demo"]
+    TMQ["ruoyi-test-mq"]
+    MON["ruoyi-monitor"]
+    SJ["ruoyi-snailjob-server"]
+    SAI["ruoyi-snailai-server (gRPC)"]
   end
   subgraph MW["中间件 (docker_ruoyi-net)"]
-    NAC["Nacos :18848"] MY["MySQL :3307"] RD["Redis :6379"]
-    MN["MinIO :9000"] SEA["Seata :7091"] KF["Kafka :9092"]
+    NAC["Nacos :18848"]
+    MY["MySQL :3307"]
+    RD["Redis :6379"]
+    MN["MinIO :9000"]
+    SEA["Seata :7091"]
+    KF["Kafka :9092"]
   end
   Client -->|/dev-api| GW
   GW --> Core
