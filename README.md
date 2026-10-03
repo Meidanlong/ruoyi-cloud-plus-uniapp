@@ -203,7 +203,7 @@ RPC（Dubbo）、分布式事务（Seata）、多数据源、数据权限/脱敏
 ## 12. Git 状态
 
 - 当前分支 `6.X`，派生自官方 `dromara/RuoYi-Cloud-Plus`（只读上游）。
-- **本地领先 `origin/6.X` 共 10 个 commit**（10 = real count from step 2）：
+- **本地领先 `origin/6.X` 共 10 个 commit**：
   `d7c7ea4`（docs: README 标题与开篇立起项目名 ruoyi-cloud-plus-uniapp）、`ba41b11`（docs: README Git 状态段 commit 计数补正为 7）、`033d371`（docs: README 重写为整合项目定位，去除与官方 ruoyi-cloud-plus 高度相似内容）、`9959ab4`（docs: README Git 状态段领先计数补正为 6 commit）、`6556c8e`（docs: README 去除本机环境特殊性，统一为通用 Docker 部署描述）、`5cce9f7`（docs: 完善根 README，新增本地化部署指南）、`e42cac8`（feat(uniapp): 接入 RuoYi-Cloud-Plus 移动端实现加密登录与鉴权链路）、`b2e7c22`（chore(docker): 扩展后端全栈 + 补 Kafka 中间件）、`be2e4dd`（chore(docker): 提交 Docker 化运行基础设施）、`917d3b1`（rebase: 统一工程坐标 + 移除 fastjson 1.x）。
 - `origin` 为官方 dromara 只读，`git push` 会被 403 拒绝；**推远程需先 fork 到可写地址**，再 `git remote set-url origin <你的fork>` 后推送。
 
